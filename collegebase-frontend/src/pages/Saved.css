@@ -100,3 +100,17 @@
 
 .compare-best { color: var(--success); font-weight: 700; }
 .compare-worst { color: var(--danger); font-weight: 700; }
+
+@media (max-width: 768px) {
+  .saved-card-main {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+  .profile-compare th,
+  .profile-compare td {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+}

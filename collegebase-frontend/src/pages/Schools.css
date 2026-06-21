@@ -226,3 +226,30 @@
 
 .compare-best { color: var(--success); font-weight: 700; }
 .compare-worst { color: var(--danger); font-weight: 700; }
+
+@media (max-width: 768px) {
+  .school-table-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .school-table-header .search-box {
+    width: 100%;
+    min-width: unset;
+  }
+  .school-table th,
+  .school-table td {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  .school-popup {
+    bottom: 12px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+  }
+  .compare-table th,
+  .compare-table td {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+}

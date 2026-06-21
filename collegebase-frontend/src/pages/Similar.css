@@ -175,3 +175,44 @@
 }
 
 .pr-tiers { display: flex; gap: 4px; }
+
+@media (max-width: 768px) {
+  .similar-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 16px;
+  }
+  .similar-controls label {
+    width: 100%;
+  }
+  .similar-controls input[type="number"] {
+    width: 100%;
+  }
+  .run-btn {
+    align-self: stretch;
+    text-align: center;
+  }
+  .mode-tabs {
+    width: 100%;
+  }
+  .mode-tab {
+    flex: 1;
+    text-align: center;
+  }
+  .similar-card {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+  .profile-row {
+    gap: 8px;
+  }
+  .pr-stats {
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 12px;
+  }
+  .anchor-card {
+    padding: 14px;
+  }
+}

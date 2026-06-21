@@ -63,9 +63,17 @@
 
 @media (max-width: 768px) {
   .metric-row {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .metric-card {
+    padding: 14px 16px;
+  }
+  .metric-value {
+    font-size: 22px;
   }
   .badge-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
   }
 }

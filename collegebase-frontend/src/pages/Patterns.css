@@ -40,6 +40,25 @@
   .badge-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
+@media (max-width: 768px) {
+  .tier-tabs {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .tier-tab {
+    padding: 6px 14px;
+    font-size: 12px;
+  }
+  .category-table th,
+  .category-table td {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  .count-detail {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 .category-table {
   overflow-x: auto;
 }

@@ -102,4 +102,20 @@
   .search-box {
     width: 100%;
   }
+  .table-wrap {
+    border-radius: var(--radius);
+  }
+  .applicant-table th,
+  .applicant-table td {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  .pagination {
+    gap: 10px;
+    font-size: 12px;
+  }
+  .pagination button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
 }
