@@ -3,7 +3,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
   gap: 16px;
 }
 
@@ -19,7 +19,7 @@
 
 .school-table th {
   background: var(--surface2);
-  padding: 8px 12px;
+  padding: 10px 14px;
   text-align: right;
   font-size: 11px;
   font-weight: 600;
@@ -30,29 +30,37 @@
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
+  transition: color var(--transition);
 }
 
 .school-table th.left, .school-table td.left { text-align: left; }
 .school-table th.sorted { color: var(--accent); }
+.school-table th:hover { color: var(--text); }
 
 .school-table td {
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--border);
   text-align: right;
 }
 
-.school-table tbody tr { cursor: pointer; transition: background 0.1s; }
+.school-table tbody tr {
+  cursor: pointer;
+  transition: background var(--transition);
+}
 .school-table tbody tr:hover { background: var(--surface2); }
-.school-table .selected-row { background: var(--surface2); border-left: 3px solid var(--accent); }
+.school-table .selected-row {
+  background: var(--accent-soft);
+  border-left: 3px solid var(--accent);
+}
 
-.unreliable-row { opacity: 0.6; }
+.unreliable-row { opacity: 0.5; }
 .unreliable { color: var(--warn); font-size: 11px; }
 
 .empty-row { text-align: center; color: var(--text-sub); padding: 24px; }
 
 .search-box {
-  padding: 6px 12px;
-  min-width: 200px;
+  padding: 8px 14px;
+  min-width: 220px;
 }
 
 .school-detail-header {
@@ -67,21 +75,26 @@
   color: #fff;
   border: none;
   border-radius: var(--radius);
-  padding: 8px 16px;
+  padding: 9px 18px;
   font-weight: 600;
   font-size: 13px;
+  transition: background var(--transition), transform var(--transition);
 }
 
-.browse-btn:hover { background: var(--accent-hover); }
+.browse-btn:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
 
 .browse-btn-sm {
   background: var(--accent);
   color: #fff;
   border: none;
-  border-radius: var(--radius);
-  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  padding: 5px 12px;
   font-size: 11px;
   font-weight: 600;
+  transition: background var(--transition);
 }
 
 .browse-btn-sm:hover { background: var(--accent-hover); }
@@ -89,35 +102,42 @@
 /* Floating popup */
 .school-popup {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 320px;
+  bottom: 24px;
+  right: 24px;
+  width: 340px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-lg);
   z-index: 50;
+  animation: slideUp 0.25s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 .school-popup h3 {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
-  margin-bottom: 10px;
-  padding-right: 24px;
+  margin-bottom: 12px;
+  padding-right: 28px;
 }
 
 .popup-close {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 12px;
+  right: 12px;
   background: var(--surface2);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   color: var(--text-sub);
-  padding: 2px 8px;
+  padding: 4px 10px;
   font-size: 14px;
   cursor: pointer;
+  transition: color var(--transition);
 }
 
 .popup-close:hover { color: var(--danger); }
@@ -125,9 +145,9 @@
 .popup-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .popup-stats div { color: var(--text-sub); }
@@ -160,8 +180,8 @@
   margin-top: 4px;
 }
 
-.accepted-text { color: var(--success); }
-.rejected-text { color: var(--danger); }
+.accepted-text { color: var(--success); font-weight: 600; }
+.rejected-text { color: var(--danger); font-weight: 600; }
 
 .school-table th.center, .school-table td.center { text-align: center; width: 40px; }
 
@@ -178,7 +198,7 @@
 
 .compare-table th {
   background: var(--surface2);
-  padding: 10px 14px;
+  padding: 12px 16px;
   text-align: center;
   font-size: 12px;
   font-weight: 600;
@@ -189,7 +209,7 @@
 }
 
 .compare-table td {
-  padding: 8px 14px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--border);
   text-align: center;
 }

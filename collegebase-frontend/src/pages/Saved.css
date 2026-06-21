@@ -1,12 +1,12 @@
 /* Saved.css */
 .saved-actions {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .saved-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .saved-card {
@@ -14,25 +14,28 @@
   align-items: center;
   background: var(--surface2);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  transition: border-color 0.1s;
+  border-radius: var(--radius-lg);
+  transition: border-color var(--transition), box-shadow var(--transition);
 }
 
-.saved-card:hover { border-color: var(--accent); }
+.saved-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
 
 .saved-card-main {
   flex: 1;
   display: flex;
   gap: 16px;
   align-items: center;
-  padding: 10px 14px;
+  padding: 12px 16px;
   cursor: pointer;
   font-size: 13px;
 }
 
 .saved-id {
   font-weight: 700;
-  color: var(--text-sub);
+  color: var(--accent);
   min-width: 40px;
 }
 
@@ -41,10 +44,11 @@
 .remove-btn {
   background: none;
   border: none;
-  color: var(--text-sub);
-  padding: 10px 14px;
+  color: var(--text-muted);
+  padding: 12px 16px;
   font-size: 14px;
   cursor: pointer;
+  transition: color var(--transition);
 }
 
 .remove-btn:hover { color: var(--danger); }
@@ -60,17 +64,18 @@
 
 .profile-compare th {
   background: var(--surface2);
-  padding: 10px 14px;
+  padding: 12px 16px;
   text-align: center;
   font-weight: 600;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
+  transition: color var(--transition);
 }
 
 .profile-compare th:hover { color: var(--accent); }
 
 .profile-compare td {
-  padding: 8px 14px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--border);
   text-align: center;
 }
@@ -88,10 +93,10 @@
 .compare-schools {
   text-align: left !important;
   font-size: 12px;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
-.compare-header { color: var(--accent); }
+.compare-header { color: var(--accent); font-weight: 700; }
 
 .compare-best { color: var(--success); font-weight: 700; }
 .compare-worst { color: var(--danger); font-weight: 700; }

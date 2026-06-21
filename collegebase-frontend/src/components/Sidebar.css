@@ -3,7 +3,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
 }
 
 .sidebar-title {
@@ -17,30 +19,37 @@
 .reset-btn {
   background: none;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   color: var(--text-sub);
   font-size: 11px;
-  padding: 2px 8px;
+  padding: 3px 10px;
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
 }
-.reset-btn:hover { color: var(--danger); border-color: var(--danger); }
+.reset-btn:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
 
 .chip-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 14px;
+  gap: 5px;
+  margin-bottom: 16px;
 }
 
 .chip {
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--accent);
   border-radius: 999px;
-  padding: 2px 8px;
+  padding: 2px 10px;
   font-size: 11px;
+  font-weight: 500;
 }
 
 .filter-section {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .filter-section label {
@@ -50,7 +59,7 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-sub);
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 }
 
 .filter-section select,
@@ -64,10 +73,17 @@
   gap: 6px;
 }
 
-.range-row input { width: 70px; }
-.range-row span { color: var(--text-sub); }
+.range-row input { width: 80px; }
+.range-row span { color: var(--text-muted); font-size: 12px; }
 
-.toggles { display: flex; flex-direction: column; gap: 8px; }
+.toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
 
 .toggle-label {
   display: flex !important;
@@ -78,9 +94,15 @@
   letter-spacing: 0 !important;
   color: var(--text) !important;
   cursor: pointer;
+  transition: color var(--transition);
+}
+
+.toggle-label:hover {
+  color: var(--accent) !important;
 }
 
 .toggle-label input[type="checkbox"] {
   width: auto;
   accent-color: var(--accent);
+  cursor: pointer;
 }

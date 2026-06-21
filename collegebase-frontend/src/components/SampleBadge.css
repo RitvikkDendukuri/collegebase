@@ -2,19 +2,26 @@
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 10px 14px;
+  padding: 12px 16px;
   min-width: 90px;
+  transition: border-color var(--transition);
+}
+
+.sample-badge:hover {
+  border-color: var(--border-hover);
 }
 
 .sample-badge.unreliable {
   border-color: var(--warn);
-  opacity: 0.75;
+  background: var(--warn-soft);
+  opacity: 0.8;
 }
 
 .badge-value {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--text);
+  letter-spacing: -0.02em;
 }
 
 .badge-label {
@@ -22,12 +29,13 @@
   color: var(--text-sub);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  margin-top: 2px;
 }
 
 .badge-n {
   font-size: 11px;
-  color: var(--text-sub);
-  margin-top: 2px;
+  color: var(--text-muted);
+  margin-top: 4px;
 }
 
 .badge-warn {
