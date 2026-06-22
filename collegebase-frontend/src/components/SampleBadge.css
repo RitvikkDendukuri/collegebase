@@ -32,10 +32,18 @@
   margin-top: 2px;
 }
 
+.badge-ci {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+  cursor: help;
+}
+
 .badge-n {
   font-size: 11px;
   color: var(--text-muted);
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .badge-warn {

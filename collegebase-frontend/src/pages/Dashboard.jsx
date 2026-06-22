@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer,
   BarChart, Bar, CartesianGrid, Legend,
@@ -7,20 +7,11 @@ import {
 import { api } from "../api";
 import { useFilters } from "../context/FilterContext";
 import { usePageTitle } from "../utils";
+import { makeRate, TIER_KEYS } from "../constants";
 import SampleBadge from "../components/SampleBadge";
 import ProfileDrawer from "../components/ProfileDrawer";
+import CorrelationMatrix from "../components/CorrelationMatrix";
 import "./Dashboard.css";
-
-const MIN_RELIABLE_N = 15;
-
-function makeRate(numerator, denominator) {
-  if (denominator === 0) return { rate: null, n: 0, reliable: false };
-  return {
-    rate: Math.round((numerator / denominator) * 10000) / 10000,
-    n: denominator,
-    reliable: denominator >= MIN_RELIABLE_N,
-  };
-}
 
 function computeStats(profiles) {
   const total = profiles.length;
@@ -38,7 +29,7 @@ function computeStats(profiles) {
   };
 
   const acceptance_rates = {};
-  for (const tier of ["t5_accepted", "t10_accepted", "t20_accepted", "t50_accepted"]) {
+  for (const tier of TIER_KEYS) {
     const allAcc = profiles.filter((p) => p[tier]).length;
     const stemPool = profiles.filter((p) => p.stem_major);
     const nonStemPool = profiles.filter((p) => !p.stem_major);
@@ -53,7 +44,7 @@ function computeStats(profiles) {
 }
 
 export default function Dashboard() {
-  const { filters } = useFilters();
+  const { debouncedFilters: filters, hideUnreliable } = useFilters();
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -71,37 +62,37 @@ export default function Dashboard() {
       .catch((e) => { setError(e.message); setLoading(false); });
   }, [filters]);
 
-  if (loading) return <div className="page-loading">Loading dashboard…</div>;
-  if (error) return <div className="page-error">Error: {error}</div>;
+  // keep these above the early returns — hooks must run in the same order every render
+  const { overall, acceptance_rates } = useMemo(() => computeStats(profiles), [profiles]);
 
-  const { overall, acceptance_rates } = computeStats(profiles);
+  const { stemPoints, nonStemPoints } = useMemo(() => {
+    const scatterData = profiles
+      .filter((p) => p.gpa_unweighted && p.sat_equivalent)
+      .map((p) => ({
+        gpa: p.gpa_unweighted,
+        sat: p.sat_equivalent,
+        stem: p.stem_major,
+        id: p.applicant_id,
+        t20: p.t20_accepted,
+      }));
+    return {
+      stemPoints: scatterData.filter((d) => d.stem),
+      nonStemPoints: scatterData.filter((d) => !d.stem),
+    };
+  }, [profiles]);
 
-  // Scatter data: GPA vs SAT-eq, colored by STEM
-  const scatterData = profiles
-    .filter((p) => p.gpa_unweighted && p.sat_equivalent)
-    .map((p) => ({
-      gpa: p.gpa_unweighted,
-      sat: p.sat_equivalent,
-      stem: p.stem_major,
-      id: p.applicant_id,
-      t20: p.t20_accepted,
-    }));
+  const ecDist = useMemo(() => {
+    const ecCounts = {};
+    profiles.forEach((p) => {
+      const n = p.num_ecs;
+      ecCounts[n] = (ecCounts[n] || 0) + 1;
+    });
+    return Object.entries(ecCounts)
+      .sort(([a], [b]) => +a - +b)
+      .map(([n, count]) => ({ ecs: +n, count }));
+  }, [profiles]);
 
-  const stemPoints = scatterData.filter((d) => d.stem);
-  const nonStemPoints = scatterData.filter((d) => !d.stem);
-
-  // EC count distribution
-  const ecCounts = {};
-  profiles.forEach((p) => {
-    const n = p.num_ecs;
-    ecCounts[n] = (ecCounts[n] || 0) + 1;
-  });
-  const ecDist = Object.entries(ecCounts)
-    .sort(([a], [b]) => +a - +b)
-    .map(([n, count]) => ({ ecs: +n, count }));
-
-  // Acceptance rates bar chart
-  const tierBars = ["t5_accepted", "t10_accepted", "t20_accepted", "t50_accepted"].map((t) => ({
+  const tierBars = useMemo(() => TIER_KEYS.map((t) => ({
     tier: t.replace("_accepted", "").toUpperCase(),
     All: acceptance_rates[t].all.rate !== null
       ? +(acceptance_rates[t].all.rate * 100).toFixed(1) : 0,
@@ -110,7 +101,16 @@ export default function Dashboard() {
     "Non-STEM": acceptance_rates[t].non_stem.rate !== null
       ? +(acceptance_rates[t].non_stem.rate * 100).toFixed(1) : 0,
     n: acceptance_rates[t].all.n,
-  }));
+  })), [acceptance_rates]);
+
+  if (loading) return <div className="page-loading">Loading dashboard…</div>;
+  if (error) return <div className="page-error">Error: {error}</div>;
+  if (profiles.length === 0) return (
+    <div className="page dashboard">
+      <h1>Dashboard</h1>
+      <div className="similar-empty">No profiles match the current filters. Try adjusting or clearing your filters.</div>
+    </div>
+  );
 
   return (
     <div className="page dashboard">
@@ -135,14 +135,19 @@ export default function Dashboard() {
         <h2>Acceptance rates by tier</h2>
         <p className="section-sub">Each rate shows the number of profiles it's based on. Rates with n &lt; 15 are flagged unreliable.</p>
         <div className="badge-grid">
-          {["t5_accepted","t10_accepted","t20_accepted","t50_accepted"].map((t) => (
-            <div key={t} className="badge-col">
-              <div className="badge-tier">{t.replace("_accepted","").toUpperCase()}</div>
-              <SampleBadge rate={acceptance_rates[t].all} label="All" />
-              <SampleBadge rate={acceptance_rates[t].stem} label="STEM" />
-              <SampleBadge rate={acceptance_rates[t].non_stem} label="Non-STEM" />
-            </div>
-          ))}
+          {TIER_KEYS.map((t) => {
+            const rates = [
+              { rate: acceptance_rates[t].all, label: "All" },
+              { rate: acceptance_rates[t].stem, label: "STEM" },
+              { rate: acceptance_rates[t].non_stem, label: "Non-STEM" },
+            ].filter((r) => !hideUnreliable || r.rate.reliable);
+            return (
+              <div key={t} className="badge-col">
+                <div className="badge-tier">{t.replace("_accepted","").toUpperCase()}</div>
+                {rates.map((r) => <SampleBadge key={r.label} rate={r.rate} label={r.label} />)}
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -151,9 +156,9 @@ export default function Dashboard() {
         <h2>Acceptance rate by tier — STEM vs Non-STEM</h2>
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={tierBars}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="tier" />
-            <YAxis unit="%" domain={[0, 100]} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+            <XAxis dataKey="tier" tick={{ fill: "var(--text-sub)" }} />
+            <YAxis unit="%" domain={[0, 100]} tick={{ fill: "var(--text-sub)" }} />
             <Tooltip formatter={(v) => v + "%"} />
             <Legend />
             <Bar dataKey="All" fill="#6366f1" />
@@ -168,11 +173,13 @@ export default function Dashboard() {
         <h2>GPA vs SAT equivalent</h2>
         <ResponsiveContainer width="100%" height={320}>
           <ScatterChart>
-            <CartesianGrid strokeDasharray="3 3" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
             <XAxis dataKey="gpa" name="GPA" domain={[2.5, 4.1]} type="number"
-              label={{ value: "GPA (unweighted)", position: "insideBottom", offset: -5 }} />
+              tick={{ fill: "var(--text-sub)" }}
+              label={{ value: "GPA (unweighted)", position: "insideBottom", offset: -5, fill: "var(--text-sub)" }} />
             <YAxis dataKey="sat" name="SAT eq" domain={[900, 1620]}
-              label={{ value: "SAT equivalent", angle: -90, position: "insideLeft" }} />
+              tick={{ fill: "var(--text-sub)" }}
+              label={{ value: "SAT equivalent", angle: -90, position: "insideLeft", fill: "var(--text-sub)" }} />
             <Tooltip cursor={{ strokeDasharray: "3 3" }}
               content={({ payload }) => {
                 if (!payload?.length) return null;
@@ -203,13 +210,23 @@ export default function Dashboard() {
         <h2>Extracurricular count distribution</h2>
         <ResponsiveContainer width="100%" height={240}>
           <AreaChart data={ecDist}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="ecs" label={{ value: "# of ECs", position: "insideBottom", offset: -5 }} />
-            <YAxis />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+            <XAxis dataKey="ecs" tick={{ fill: "var(--text-sub)" }}
+              label={{ value: "# of ECs", position: "insideBottom", offset: -5, fill: "var(--text-sub)" }} />
+            <YAxis tick={{ fill: "var(--text-sub)" }} />
             <Tooltip />
             <Area type="monotone" dataKey="count" fill="#6366f1" stroke="#4f46e5" fillOpacity={0.4} />
           </AreaChart>
         </ResponsiveContainer>
+      </section>
+
+      <section className="chart-section">
+        <h2>Feature correlation matrix</h2>
+        <p className="section-sub">
+          Pearson correlation between numeric features across the {overall.total_profiles} filtered
+          profiles. Green = move together, red = move oppositely, yellow = unrelated.
+        </p>
+        <CorrelationMatrix profiles={profiles} />
       </section>
 
       <ProfileDrawer applicantId={selectedId} onClose={() => setSelectedId(null)} />
