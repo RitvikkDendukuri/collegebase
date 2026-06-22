@@ -211,6 +211,12 @@ Includes **Auto** mode that follows your system dark/light preference. All theme
 
 ---
 
+## Data Disclaimer
+
+The profiles in this dataset are a **convenience sample** scraped from r/collegeresults — they are not representative of the total applicant population. Users who post tend to have stronger profiles and skew toward T20 outcomes. Acceptance rates here will be higher than reality, and demographic breakdowns may not reflect national trends. Treat everything as "among people who posted," not "among all applicants."
+
+---
+
 ## Sample Size Honesty
 
 Every acceptance rate in the app reports:
