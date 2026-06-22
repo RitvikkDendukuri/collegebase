@@ -21,26 +21,43 @@ and is flagged unreliable when n is below MIN_RELIABLE_N.
 """
 
 import os
+import time
+from collections import defaultdict
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 import db
 
-MIN_RELIABLE_N = 15  # below this, a rate is statistically too thin to trust
+MIN_RELIABLE_N = 15  # below this a rate is too thin to trust
+
+# in-memory rate limiter for /ratings
+_rate_buckets = defaultdict(list)
+RATE_LIMIT = 30        # requests per window
+RATE_WINDOW = 60       # seconds
+
+def _check_rate_limit(client_ip: str):
+    now = time.time()
+    bucket = _rate_buckets[client_ip]
+    _rate_buckets[client_ip] = [t for t in bucket if now - t < RATE_WINDOW]
+    if len(_rate_buckets[client_ip]) >= RATE_LIMIT:
+        raise HTTPException(status_code=429, detail="Too many ratings. Try again later.")
+    _rate_buckets[client_ip].append(now)
 
 app = FastAPI(title="CollegeBase API", version="1.0.0")
 
-# Allow the future React dev server to call this API from the browser.
+# lock CORS to known origins; override with CORS_ORIGINS in prod
+ALLOWED_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # tighten to your real domain before going public
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
 
 
@@ -56,15 +73,32 @@ class Rate(BaseModel):
     rate: Optional[float]      # None when n == 0
     n: int                     # sample size the rate is based on
     reliable: bool             # False when n < MIN_RELIABLE_N
+    ci_low: Optional[float]    # Wilson 95% lower bound (None when n == 0)
+    ci_high: Optional[float]   # Wilson 95% upper bound (None when n == 0)
+
+
+def wilson_interval(numerator: int, denominator: int, z: float = 1.96):
+    # Wilson 95% CI — stays in [0,1] and holds up at small n, unlike p ± z·√(...)
+    if denominator == 0:
+        return None, None
+    p = numerator / denominator
+    n = denominator
+    denom = 1 + z**2 / n
+    center = (p + z**2 / (2 * n)) / denom
+    margin = (z / denom) * ((p * (1 - p) / n + z**2 / (4 * n**2)) ** 0.5)
+    return round(max(0.0, center - margin), 4), round(min(1.0, center + margin), 4)
 
 
 def make_rate(numerator: int, denominator: int) -> Rate:
     if denominator == 0:
-        return Rate(rate=None, n=0, reliable=False)
+        return Rate(rate=None, n=0, reliable=False, ci_low=None, ci_high=None)
+    low, high = wilson_interval(numerator, denominator)
     return Rate(
         rate=round(numerator / denominator, 4),
         n=denominator,
         reliable=denominator >= MIN_RELIABLE_N,
+        ci_low=low,
+        ci_high=high,
     )
 
 
@@ -126,7 +160,8 @@ def get_one(applicant_id: int):
 
 
 @app.post("/ratings")
-def post_rating(payload: RatingIn):
+def post_rating(payload: RatingIn, request: Request):
+    _check_rate_limit(request.client.host if request.client else "unknown")
     try:
         new_id = db.add_rating(payload.applicant_id, payload.rating)
     except ValueError as e:
@@ -214,6 +249,20 @@ def _mean(rows, col):
 
 # --- similarity (optional, needs scikit-learn) ------------------------------
 
+# bigger than the shown list (k) so the outcome rate actually means something
+SIMILAR_COHORT = 25
+
+
+def _cohort_outcomes(profiles):
+    # what actually happened to similar applicants — honest stand-in for "chance me"
+    n = len(profiles)
+    tiers = {}
+    for t in ("t5", "t10", "t20", "t50"):
+        accepted = sum(1 for p in profiles if p.get(f"{t}_accepted"))
+        tiers[t] = make_rate(accepted, n).model_dump()
+    return {"cohort_n": n, "tiers": tiers}
+
+
 @app.get("/similar/{applicant_id}")
 def similar(applicant_id: int, k: int = Query(5, ge=1, le=20)):
     try:
@@ -245,13 +294,17 @@ def similar(applicant_id: int, k: int = Query(5, ge=1, le=20)):
     Xs = StandardScaler().fit_transform(X)
 
     target_idx = ids.index(applicant_id)
-    n_neighbors = min(k + 1, len(usable))   # +1 because the target matches itself
+    # +1 since the target matches itself, then drop it below
+    n_neighbors = min(SIMILAR_COHORT + 1, len(usable))
     nn = NearestNeighbors(n_neighbors=n_neighbors).fit(Xs)
     _, idxs = nn.kneighbors([Xs[target_idx]])
 
-    neighbor_ids = [ids[i] for i in idxs[0] if ids[i] != applicant_id][:k]
-    neighbors = [db.get_applicant(i) for i in neighbor_ids]
-    return {"applicant_id": applicant_id, "neighbors": neighbors}
+    cohort = [usable[i] for i in idxs[0] if ids[i] != applicant_id]
+    return {
+        "applicant_id": applicant_id,
+        "neighbors": cohort[:k],
+        "outcomes": _cohort_outcomes(cohort),
+    }
 
 
 # --- shared filter helper ---------------------------------------------------
@@ -313,12 +366,15 @@ def school_stats(
         acc = data["accepted"]
         rej = data["rejected"]
         total = len(acc) + len(rej)
+        ci_low, ci_high = wilson_interval(len(acc), total)
         result.append({
             "school": name,
             "accepted": len(acc),
             "rejected": len(rej),
             "total": total,
             "accept_rate": round(len(acc) / total, 4) if total else None,
+            "ci_low": ci_low,
+            "ci_high": ci_high,
             "reliable": total >= MIN_RELIABLE_N,
             "avg_gpa": _mean(acc, "gpa_unweighted"),
             "avg_sat": _mean(acc, "sat_equivalent"),
@@ -407,6 +463,8 @@ def demographics(
             for t in tiers:
                 accepted = sum(1 for p in pool if p[t])
                 entry[t] = round(accepted / n, 4) if n else None
+                low, high = wilson_interval(accepted, n)
+                entry[f"{t}_ci"] = [low, high]
             result.append(entry)
         return result
 
@@ -430,6 +488,159 @@ def demographics(
             "group",
         ),
     }
+
+
+# --- batch fetch ------------------------------------------------------------
+
+class BatchIds(BaseModel):
+    ids: list[int]
+
+@app.post("/applicants/batch")
+def batch_applicants(payload: BatchIds):
+    results = []
+    for aid in payload.ids[:50]:
+        a = db.get_applicant(aid)
+        if a:
+            a["ratings"] = db.get_rating_summary(aid)
+            results.append(a)
+    return {"applicants": results}
+
+
+# --- archetypes (strength-based classification) ----------------------------
+
+# Normalization scale: 10 ECs ≈ 5 awards ≈ 4.0 GPA ≈ 1600 SAT
+def _normalize_profile(r):
+    return {
+        "gpa": (r.get("gpa_unweighted") or 0) / 4.0,
+        "sat": (r.get("sat_equivalent") or 0) / 1600,
+        "ecs": (r.get("num_ecs") or 0) / 10,
+        "awards": (r.get("num_awards") or 0) / 5,
+    }
+
+def _classify_profile(r):
+    n = _normalize_profile(r)
+    scores = [("GPA-Focused", n["gpa"]), ("SAT-Focused", n["sat"]),
+              ("EC-Focused", n["ecs"]), ("Award-Focused", n["awards"])]
+    vals = [s[1] for s in scores]
+    top = max(vals)
+    if top == 0:
+        return "Well-Balanced"
+    spread = top - min(vals)
+    avg = sum(vals) / 4
+    if avg > 0 and spread / avg < 0.35:
+        return "Well-Balanced"
+    return max(scores, key=lambda s: s[1])[0]
+
+def _build_group(label, members):
+    n = len(members)
+    if n == 0:
+        return None
+    top_ecs, top_awards, top_majors = {}, {}, {}
+    for m in members:
+        for ec in (m.get("ec_categories") or []):
+            top_ecs[ec] = top_ecs.get(ec, 0) + 1
+        for aw in (m.get("award_categories") or []):
+            top_awards[aw] = top_awards.get(aw, 0) + 1
+        for maj in (m.get("majors") or []):
+            top_majors[maj] = top_majors.get(maj, 0) + 1
+    return {
+        "label": label,
+        "n": n,
+        "reliable": n >= MIN_RELIABLE_N,
+        "avg_gpa": _mean(members, "gpa_unweighted"),
+        "avg_sat": _mean(members, "sat_equivalent"),
+        "avg_ecs": _mean(members, "num_ecs"),
+        "avg_awards": _mean(members, "num_awards"),
+        "stem_pct": round(sum(1 for m in members if m["stem_major"]) / n, 4),
+        "t5_rate": round(sum(1 for m in members if m["t5_accepted"]) / n, 4),
+        "t20_rate": round(sum(1 for m in members if m["t20_accepted"]) / n, 4),
+        "top_ecs": sorted(top_ecs.items(), key=lambda x: -x[1])[:5],
+        "top_awards": sorted(top_awards.items(), key=lambda x: -x[1])[:5],
+        "top_majors": sorted(top_majors.items(), key=lambda x: -x[1])[:5],
+        "member_ids": [m["applicant_id"] for m in members],
+        # light summaries so the UI can list members without another request
+        "members": [
+            {
+                "applicant_id": m["applicant_id"],
+                "gpa_unweighted": m.get("gpa_unweighted"),
+                "sat_equivalent": m.get("sat_equivalent"),
+                "num_ecs": m.get("num_ecs"),
+                "num_awards": m.get("num_awards"),
+                "majors": m.get("majors") or [],
+                "t5_accepted": m.get("t5_accepted"),
+                "t20_accepted": m.get("t20_accepted"),
+            }
+            for m in members
+        ],
+    }
+
+@app.get("/archetypes")
+def archetypes(
+    view: str = Query("detailed", pattern="^(detailed|grouped)$"),
+    gpa_min: Optional[float] = None, gpa_max: Optional[float] = None,
+    sat_min: Optional[float] = None, sat_max: Optional[float] = None,
+    stem_only: bool = False, test_optional_only: bool = False,
+    submitted_scores_only: bool = False,
+    accepted_tier: Optional[str] = Query(None, pattern="^(t5|t10|t20|t50)$"),
+    major: Optional[str] = None, race: Optional[str] = None,
+    race_group: Optional[str] = None, gender: Optional[str] = None,
+    accepted_at: Optional[str] = None,
+    ec_category: Optional[str] = None, award_category: Optional[str] = None,
+):
+    rows = _get_filtered_rows(**locals())
+    feats = ["gpa_unweighted", "sat_equivalent", "num_ecs", "num_awards"]
+    usable = [r for r in rows if all(r.get(f) is not None for f in feats)]
+
+    if view == "grouped":
+        # Group by academic strength (GPA+SAT) and activity strength (ECs+awards)
+        def academic_bucket(r):
+            n = _normalize_profile(r)
+            avg = (n["gpa"] + n["sat"]) / 2
+            if avg >= 0.93: return "Elite academics (GPA 3.9+ / SAT 1500+)"
+            if avg >= 0.87: return "Strong academics (GPA 3.7+ / SAT 1400+)"
+            if avg >= 0.8: return "Solid academics (GPA 3.4+ / SAT 1300+)"
+            return "Developing academics"
+
+        def activity_bucket(r):
+            n = _normalize_profile(r)
+            avg = (n["ecs"] + n["awards"]) / 2
+            if avg >= 0.8: return "Highly active (8+ ECs / 4+ awards)"
+            if avg >= 0.5: return "Active (5+ ECs / 2+ awards)"
+            if avg >= 0.25: return "Moderate activity"
+            return "Light activity"
+
+        acad_groups, act_groups = {}, {}
+        for r in usable:
+            ab = academic_bucket(r)
+            acad_groups.setdefault(ab, []).append(r)
+            actb = activity_bucket(r)
+            act_groups.setdefault(actb, []).append(r)
+
+        acad_order = ["Elite academics (GPA 3.9+ / SAT 1500+)",
+                      "Strong academics (GPA 3.7+ / SAT 1400+)",
+                      "Solid academics (GPA 3.4+ / SAT 1300+)",
+                      "Developing academics"]
+        act_order = ["Highly active (8+ ECs / 4+ awards)",
+                     "Active (5+ ECs / 2+ awards)",
+                     "Moderate activity", "Light activity"]
+
+        return {
+            "view": "grouped",
+            "by_academics": [_build_group(k, acad_groups.get(k, [])) for k in acad_order if acad_groups.get(k)],
+            "by_activity": [_build_group(k, act_groups.get(k, [])) for k in act_order if act_groups.get(k)],
+            "total_profiles": len(usable),
+        }
+
+    # Detailed view: classify each profile by its strongest dimension
+    buckets = {}
+    for r in usable:
+        label = _classify_profile(r)
+        buckets.setdefault(label, []).append(r)
+
+    order = ["GPA-Focused", "SAT-Focused", "EC-Focused", "Award-Focused", "Well-Balanced"]
+    clusters = [_build_group(label, buckets.get(label, [])) for label in order if buckets.get(label)]
+
+    return {"view": "detailed", "clusters": clusters, "total_profiles": len(usable)}
 
 
 class CustomProfile(BaseModel):
@@ -459,7 +670,6 @@ def similar_custom(profile: CustomProfile):
     if not usable:
         raise HTTPException(status_code=404, detail="No usable profiles in database.")
 
-    ids = [r["applicant_id"] for r in usable]
     X = np.array([[r[f] for f in feats] + [int(r.get("stem_major", False))]
                    for r in usable], dtype=float)
     target = np.array([[profile.gpa_unweighted, profile.sat_equivalent,
@@ -470,13 +680,16 @@ def similar_custom(profile: CustomProfile):
     Xs = scaler.transform(X)
     target_s = scaler.transform(target)
 
-    n_neighbors = min(profile.k, len(usable))
+    n_neighbors = min(SIMILAR_COHORT, len(usable))
     nn = NearestNeighbors(n_neighbors=n_neighbors).fit(Xs)
     _, idxs = nn.kneighbors(target_s)
 
-    neighbor_ids = [ids[i] for i in idxs[0]]
-    neighbors = [db.get_applicant(i) for i in neighbor_ids]
-    return {"custom": True, "neighbors": neighbors}
+    cohort = [usable[i] for i in idxs[0]]
+    return {
+        "custom": True,
+        "neighbors": cohort[:profile.k],
+        "outcomes": _cohort_outcomes(cohort),
+    }
 
 
 # --- serve the React frontend (built by Vite) --------------------------------

@@ -90,22 +90,18 @@ def list_applicants(filters):
         where.append("gender = ?")
         params.append(filters["gender"])
 
-    # JSON list columns; LIKE is a simple, safe substring match.
-    if filters.get("major"):
-        where.append("majors LIKE ?")
-        params.append(f'%"{filters["major"]}"%')
-    if filters.get("race"):
-        where.append("race LIKE ?")
-        params.append(f'%"{filters["race"]}"%')
-    if filters.get("accepted_at"):
-        where.append("acceptances LIKE ?")
-        params.append(f'%"{filters["accepted_at"]}"%')
-    if filters.get("ec_category"):
-        where.append("ec_categories LIKE ?")
-        params.append(f'%"{filters["ec_category"]}"%')
-    if filters.get("award_category"):
-        where.append("award_categories LIKE ?")
-        params.append(f'%"{filters["award_category"]}"%')
+    # JSON list columns matched by substring. Escape LIKE wildcards so user
+    # input can't smuggle in % or _ patterns.
+    def _escape_like(s):
+        return s.replace("%", "\\%").replace("_", "\\_")
+
+    for key, col in [("major", "majors"), ("race", "race"),
+                     ("accepted_at", "acceptances"),
+                     ("ec_category", "ec_categories"),
+                     ("award_category", "award_categories")]:
+        if filters.get(key):
+            where.append(f'{col} LIKE ? ESCAPE "\\"')
+            params.append(f'%"{_escape_like(filters[key])}"%')
 
     sql = "SELECT * FROM applicants"
     if where:
