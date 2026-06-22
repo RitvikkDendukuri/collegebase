@@ -13,7 +13,7 @@ Explore real college applicant profiles, acceptance patterns, and school statist
 - [Features](#features)
   - [Dashboard](#dashboard)
   - [Browser](#browser)
-  - [Patterns](#patterns) — includes the **GPA × SAT heatmap deep dive**
+  - [Patterns](#patterns) 
   - [Schools](#schools)
   - [Demographics](#demographics)
   - [Archetypes](#archetypes)
