@@ -34,9 +34,9 @@ The landing page summarizing all profiles in the database (respects sidebar filt
 - **Bar chart** — Visual comparison of STEM vs Non-STEM acceptance rates per tier
 - **GPA vs SAT scatter** — Click any dot to open the profile drawer. Color-coded by STEM/Non-STEM, T20 acceptances highlighted in tooltip
 - **EC count distribution** — Area chart showing how many extracurriculars applicants typically have
-- **Correlation matrix** — 5×5 Pearson correlation grid (GPA, SAT, APs, ECs, Awards) with red→yellow→green coloring matching the original Streamlit version
+- **Correlation matrix** — 5×5 Pearson correlation grid (GPA, SAT, APs, ECs, Awards) with red→yellow→green coloring
 
-All derived data is memoized with `useMemo` to keep re-renders fast.
+**How to use it:** Start here to get a high-level feel for the dataset. Use the correlation matrix to spot which stats actually move together — if GPA and awards are strongly correlated but SAT and ECs aren't, that tells you something about what kind of applicants post. Toggle STEM-only in the sidebar to see how the picture changes for STEM vs non-STEM.
 
 </details>
 
@@ -54,6 +54,8 @@ A paginated table of all applicants matching the current filters.
 - **CSV export** — Download the current filtered/sorted view as a CSV file
 - **Profile drawer** — Click any row to see full applicant details in a slide-out panel
 
+**How to use it:** Filter down to a group you care about (e.g. STEM, 3.7+ GPA) and browse who's in that pool. Sort by SAT to see the range, or search for a specific school to find everyone who got in there. Export to CSV if you want to do your own analysis.
+
 </details>
 
 <details>
@@ -66,7 +68,7 @@ Breaks down acceptance rates across different dimensions, organized into three s
 **Academics tab:**
 - GPA bucket breakdown with acceptance rates per tier
 - SAT bucket breakdown with acceptance rates per tier
-- **GPA × SAT heatmap** — 4×4 grid showing acceptance rates for each GPA/SAT band combination. Color intensity scales to the strongest reliable cell so both T5 (low rates) and T50 (high rates) remain readable. Cells with too few profiles show a ⚠ warning and are hatched
+- **GPA × SAT heatmap** — 4×4 grid showing acceptance rates for each GPA/SAT band combination. Color intensity scales to the strongest reliable cell so both T5 (low rates) and T50 (high rates) remain readable. Cells with too few profiles show a ⚠ warning and are hatched. Use this to answer questions like: can a high SAT compensate for a lower GPA? Is a balanced 3.7/1500 better than a lopsided 3.5/1580? Compare cells across the diagonal to find out
 
 **Activities tab:**
 - EC category impact — Which types of extracurriculars correlate with higher acceptance rates
@@ -78,6 +80,8 @@ Breaks down acceptance rates across different dimensions, organized into three s
 - STEM vs Non-STEM acceptance rate differences
 
 Each rate is clickable — click a bar to jump to the Browser filtered to that group.
+
+**How to use it:** Switch between tiers (T5/T10/T20/T50) on the heatmap to see how the GPA×SAT tradeoff changes at different selectivity levels. Check the Activities tab to see which EC types actually correlate with acceptances vs which are just common. Use the Adjusted tab to see if going test-optional actually mattered for people in the dataset.
 
 </details>
 
@@ -98,6 +102,8 @@ Every school that appears in the dataset gets its own stats.
 - **Comparison mode** — Check up to 4 schools to see a side-by-side table. Best/worst values are highlighted green/red
 - **Search** — Filter the school list by name
 
+**How to use it:** Find a school you're interested in, click it, and look at who actually got in vs who didn't. Compare two similar-tier schools side by side to see if one favors higher GPAs while the other values ECs more. The accepted/rejected split lets you see what the rejection pool looked like — sometimes the stats are nearly identical, which tells you the decision came down to something not in the numbers.
+
 </details>
 
 <details>
@@ -112,6 +118,8 @@ Acceptance rate breakdowns by demographic categories.
 - **By test policy** — Test-optional vs submitted scores comparison
 - Each breakdown shows average GPA, average SAT, sample size, and Wilson 95% CIs
 - Tier rates shown as horizontal colored bars for quick visual scanning
+
+**How to use it:** See how acceptance rates differ across demographic groups within this dataset. Keep in mind the convenience sample caveat — these numbers reflect who posts on r/collegeresults, not the full applicant pool. Most useful for comparing relative differences between groups rather than taking any single rate at face value.
 
 </details>
 
@@ -134,6 +142,8 @@ Classifies every profile by its strongest trait on a normalized scale (10 ECs �
 
 Cards with small samples (n < 15) are dimmed with dashed borders but become fully visible on hover. Respects sidebar filters — change a filter and archetypes recalculate.
 
+**How to use it:** Figure out what "type" of applicant you are — are you GPA-heavy, EC-heavy, or balanced? Then check how that archetype performs. If EC-Focused applicants have a higher T20 rate than GPA-Focused ones, that's a signal about what the data shows (though remember: EC *count* doesn't capture quality). Use the member browser to find specific people in your archetype and see their full profiles.
+
 </details>
 
 <details>
@@ -152,6 +162,8 @@ Find the most similar applicants using K-nearest-neighbors on GPA, SAT, ECs, and
 - **"How applicants like this did"** — Cohort outcomes panel showing T5/T10/T20/T50 acceptance rates across the 25 nearest neighbors, each with Wilson CIs and sample sizes
 
 This is the honest alternative to "chance me" — instead of a made-up probability, you see what actually happened to real applicants with similar numbers. The app explicitly notes that numbers can't capture EC quality, so these rates are a floor, not a ceiling.
+
+**How to use it:** Plug in your own stats and see who in the dataset looks like you. Don't fixate on the cohort acceptance rate as a prediction — instead, click through the individual profiles to see what those similar applicants actually did. Where did they get in? What ECs did they have? That context is worth more than any single percentage.
 
 </details>
 
