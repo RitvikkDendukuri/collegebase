@@ -215,6 +215,8 @@ Includes **Auto** mode that follows your system dark/light preference. All theme
 
 The profiles in this dataset are a **convenience sample** scraped from r/collegeresults — they are not representative of the total applicant population. Users who post tend to have stronger profiles and skew toward T20 outcomes. Acceptance rates here will be higher than reality, and demographic breakdowns may not reflect national trends. Treat everything as "among people who posted," not "among all applicants."
 
+This bias is strongest for less selective schools — their average accepted GPA/SAT will appear inflated because the people in the dataset are mostly T20 hopefuls who also applied there. Stats for highly selective schools (T20/T5) are closer to accurate since that's the crowd that posts.
+
 ---
 
 ## Sample Size Honesty
