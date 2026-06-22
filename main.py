@@ -29,7 +29,10 @@ def _check_rate_limit(client_ip: str):
 
 app = FastAPI(title="CollegeBase API", version="1.0.0")
 
-ALLOWED_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
+ALLOWED_ORIGINS = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:5173,http://localhost:3000,https://simplycollege.onrender.com"
+).split(",")
 
 app.add_middleware(
     CORSMiddleware,
@@ -643,7 +646,7 @@ def similar_custom(profile: CustomProfile):
 STATIC_DIR = Path(__file__).resolve().parent / "collegebase-frontend" / "dist"
 
 
-# catch-all: serve built frontend, fall back to index.html for SPA routing
+@app.head("/{full_path:path}")
 @app.get("/{full_path:path}")
 def serve_spa(full_path: str):
     if not STATIC_DIR.is_dir():

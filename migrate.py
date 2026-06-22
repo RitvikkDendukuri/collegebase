@@ -24,10 +24,11 @@ import pandas as pd
 import logic
 
 # --- config -----------------------------------------------------------------
-PROFILES_JSONL = "profiles.jsonl"
-SCHEMA_SQL = "schema.sql"
-DB_PATH = "collegebase.db"
-OLD_RATINGS_DB = "profile_ratings.db"  # optional; carried over if it exists
+_DIR = Path(__file__).resolve().parent
+PROFILES_JSONL = _DIR / "profiles.jsonl"
+SCHEMA_SQL = _DIR / "schema.sql"
+DB_PATH = _DIR / "collegebase.db"
+OLD_RATINGS_DB = _DIR / "profile_ratings.db"  # optional; carried over if it exists
 
 # Columns that hold Python lists and must be JSON-encoded for storage.
 LIST_COLS = [

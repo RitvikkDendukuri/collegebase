@@ -4,7 +4,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-DB_PATH = "collegebase.db"
+DB_PATH = Path(__file__).resolve().parent / "collegebase.db"
 
 _LIST_COLS = [
     "majors", "race", "awards", "extracurriculars",
