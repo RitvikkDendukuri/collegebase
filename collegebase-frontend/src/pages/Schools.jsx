@@ -7,9 +7,10 @@ import {
 import { api } from "../api";
 import { useFilters } from "../context/FilterContext";
 import { rankClass, usePageTitle } from "../utils";
+import { MIN_RELIABLE_N } from "../constants";
 import "./Schools.css";
 
-const MIN_N = 15;
+const MIN_N = MIN_RELIABLE_N;
 
 export default function Schools() {
   const [schools, setSchools] = useState([]);
@@ -19,7 +20,7 @@ export default function Schools() {
   const [sortDir, setSortDir] = useState("desc");
   const [selected, setSelected] = useState(null);
   const [compare, setCompare] = useState([]);
-  const { filters, update, reset, hideUnreliable } = useFilters();
+  const { debouncedFilters: filters, update, reset, hideUnreliable } = useFilters();
   const navigate = useNavigate();
 
   usePageTitle("Schools");
@@ -50,6 +51,12 @@ export default function Schools() {
   }, [filters]);
 
   if (loading) return <div className="page-loading">Loading school data...</div>;
+  if (schools.length === 0) return (
+    <div className="page schools">
+      <h1>School-Specific Stats</h1>
+      <div className="similar-empty">No school data matches the current filters. Try adjusting or clearing your filters.</div>
+    </div>
+  );
 
   const filtered = schools.filter((s) =>
     s.school.toLowerCase().includes(search.toLowerCase()) &&
@@ -111,9 +118,9 @@ export default function Schools() {
         <h2>Most reported schools (min 5 data points)</h2>
         <ResponsiveContainer width="100%" height={380}>
           <BarChart data={topChart} layout="vertical" margin={{ left: 180, right: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" />
-            <YAxis dataKey="school" type="category" tick={{ fontSize: 11 }} width={170} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+            <XAxis type="number" tick={{ fill: "var(--text-sub)" }} />
+            <YAxis dataKey="school" type="category" tick={{ fontSize: 11, fill: "var(--text-sub)" }} width={170} />
             <Tooltip
               content={({ payload }) => {
                 if (!payload?.length) return null;
@@ -184,6 +191,11 @@ export default function Schools() {
             <div><span className="accepted-text">{selectedSchool.accepted}</span> accepted</div>
             <div><span className="rejected-text">{selectedSchool.rejected}</span> rejected</div>
             <div>{selectedSchool.accept_rate != null ? (selectedSchool.accept_rate * 100).toFixed(1) + "%" : "—"} rate
+              {selectedSchool.ci_low != null && (
+                <span className="ci-range" title="Wilson 95% confidence interval">
+                  {" "}(95% CI {(selectedSchool.ci_low * 100).toFixed(0)}–{(selectedSchool.ci_high * 100).toFixed(0)}%)
+                </span>
+              )}
               {!selectedSchool.reliable && <span className="unreliable"> (n={selectedSchool.total})</span>}
             </div>
             <div>GPA: {selectedSchool.avg_gpa?.toFixed(2) ?? "—"}</div>

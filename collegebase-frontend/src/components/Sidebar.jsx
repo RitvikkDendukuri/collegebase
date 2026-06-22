@@ -1,8 +1,41 @@
+import { useState } from "react";
 import { useFilters } from "../context/FilterContext";
 import "./Sidebar.css";
 
+function getSavedPresets() {
+  try { return JSON.parse(localStorage.getItem("filterPresets")) || []; }
+  catch { return []; }
+}
+
+function saveSavedPresets(presets) {
+  localStorage.setItem("filterPresets", JSON.stringify(presets));
+}
+
 export default function Sidebar() {
-  const { filters, update, reset, options, activeChips, hideUnreliable, setHideUnreliable } = useFilters();
+  const { filters, update, reset, setFilters, options, activeChips, hideUnreliable, setHideUnreliable } = useFilters();
+  const [presets, setPresets] = useState(getSavedPresets);
+  const [showSave, setShowSave] = useState(false);
+  const [presetName, setPresetName] = useState("");
+
+  function savePreset() {
+    const name = presetName.trim();
+    if (!name) return;
+    const updated = [...presets.filter((p) => p.name !== name), { name, filters }];
+    saveSavedPresets(updated);
+    setPresets(updated);
+    setPresetName("");
+    setShowSave(false);
+  }
+
+  function loadPreset(preset) {
+    setFilters(preset.filters);
+  }
+
+  function deletePreset(name) {
+    const updated = presets.filter((p) => p.name !== name);
+    saveSavedPresets(updated);
+    setPresets(updated);
+  }
 
   return (
     <aside className="sidebar">
@@ -20,6 +53,37 @@ export default function Sidebar() {
           ))}
         </div>
       )}
+
+      {/* Save / Load filter presets */}
+      <section className="filter-section preset-section">
+        <div className="preset-header">
+          <label>Saved filters</label>
+          <button className="preset-add-btn" onClick={() => setShowSave(!showSave)}
+            title="Save current filters">+</button>
+        </div>
+        {showSave && (
+          <div className="preset-save-row">
+            <input type="text" placeholder="Preset name…" value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && savePreset()} />
+            <button className="preset-save-btn" onClick={savePreset}
+              disabled={!presetName.trim()}>Save</button>
+          </div>
+        )}
+        {presets.length > 0 && (
+          <div className="preset-list">
+            {presets.map((p) => (
+              <div key={p.name} className="preset-item">
+                <button className="preset-load" onClick={() => loadPreset(p)}>
+                  {p.name}
+                </button>
+                <button className="preset-delete" onClick={() => deletePreset(p.name)}
+                  title="Delete preset">✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="filter-section">
         <label>GPA (unweighted)</label>

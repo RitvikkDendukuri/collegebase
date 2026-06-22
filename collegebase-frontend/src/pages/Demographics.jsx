@@ -7,11 +7,11 @@ import {
 import { api } from "../api";
 import { useFilters } from "../context/FilterContext";
 import { usePageTitle } from "../utils";
+import { MIN_RELIABLE_N, TIER_LABELS } from "../constants";
 import "./Demographics.css";
 
-const MIN_N = 15;
-const TIER_COLORS = { t5_accepted: "#ef4444", t10_accepted: "#f97316", t20_accepted: "#6366f1", t50_accepted: "#22c55e" };
-const TIER_LABELS = { t5_accepted: "T5", t10_accepted: "T10", t20_accepted: "T20", t50_accepted: "T50" };
+const MIN_N = MIN_RELIABLE_N;
+const TIER_COLORS_KEYED = { t5_accepted: "#ef4444", t10_accepted: "#f97316", t20_accepted: "#6366f1", t50_accepted: "#22c55e" };
 
 function RateTable({ data, labelKey, title, onRowClick, hideUnreliable }) {
   const [sortKey, setSortKey] = useState("n");
@@ -100,9 +100,9 @@ function TierChart({ data, labelKey, title }) {
       <h2>{title}</h2>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={chartData} margin={{ bottom: 40 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" angle={-30} textAnchor="end" interval={0} tick={{ fontSize: 11 }} />
-          <YAxis unit="%" domain={[0, 100]} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+          <XAxis dataKey="name" angle={-30} textAnchor="end" interval={0} tick={{ fontSize: 11, fill: "var(--text-sub)" }} />
+          <YAxis unit="%" domain={[0, 100]} tick={{ fill: "var(--text-sub)" }} />
           <Tooltip
             content={({ payload, label }) => {
               if (!payload?.length) return null;
@@ -119,10 +119,10 @@ function TierChart({ data, labelKey, title }) {
             }}
           />
           <Legend />
-          <Bar dataKey="T5" fill={TIER_COLORS.t5_accepted} />
-          <Bar dataKey="T10" fill={TIER_COLORS.t10_accepted} />
-          <Bar dataKey="T20" fill={TIER_COLORS.t20_accepted} />
-          <Bar dataKey="T50" fill={TIER_COLORS.t50_accepted} />
+          <Bar dataKey="T5" fill={TIER_COLORS_KEYED.t5_accepted} />
+          <Bar dataKey="T10" fill={TIER_COLORS_KEYED.t10_accepted} />
+          <Bar dataKey="T20" fill={TIER_COLORS_KEYED.t20_accepted} />
+          <Bar dataKey="T50" fill={TIER_COLORS_KEYED.t50_accepted} />
         </BarChart>
       </ResponsiveContainer>
     </section>
@@ -133,7 +133,7 @@ export default function Demographics() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [raceView, setRaceView] = useState("grouped");
-  const { filters, update, reset, hideUnreliable } = useFilters();
+  const { debouncedFilters: filters, update, reset, hideUnreliable } = useFilters();
   const navigate = useNavigate();
 
   usePageTitle("Demographics");
@@ -147,6 +147,12 @@ export default function Demographics() {
 
   if (loading) return <div className="page-loading">Loading demographics...</div>;
   if (!data) return <div className="page-error">Failed to load demographics. Is the API running?</div>;
+  if (data.by_race?.length === 0 && data.by_gender?.length === 0) return (
+    <div className="page demographics">
+      <h1>Demographic Breakdowns</h1>
+      <div className="similar-empty">No demographic data matches the current filters. Try adjusting or clearing your filters.</div>
+    </div>
+  );
 
   const raceData = raceView === "grouped" ? data.by_race_grouped : data.by_race;
 

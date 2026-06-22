@@ -35,8 +35,8 @@ export default function Saved() {
       return;
     }
     setLoading(true);
-    Promise.all(savedIds.map((id) => api.applicant(id)))
-      .then((results) => { setProfiles(results); setLoading(false); })
+    api.batchApplicants(savedIds)
+      .then((data) => { setProfiles(data.applicants); setLoading(false); })
       .catch(() => setLoading(false));
   }, [savedIds]);
 

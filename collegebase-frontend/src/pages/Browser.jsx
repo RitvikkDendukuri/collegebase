@@ -20,7 +20,7 @@ const COLS = [
 ];
 
 export default function Browser() {
-  const { filters } = useFilters();
+  const { debouncedFilters: filters } = useFilters();
   const [profiles, setProfiles] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -79,6 +79,33 @@ export default function Browser() {
     else { setSortKey(key); setSortDir("asc"); }
   }
 
+  function exportCsv(rows) {
+    const headers = ["ID","GPA_UW","GPA_W","SAT_Eq","Majors","STEM","ECs","Awards","Accepted","T20","T5"];
+    const csvRows = [headers.join(",")];
+    rows.forEach((p) => {
+      csvRows.push([
+        p.applicant_id,
+        p.gpa_unweighted ?? "",
+        p.gpa_weighted ?? "",
+        p.sat_equivalent ?? "",
+        `"${(p.majors || []).join("; ")}"`,
+        p.stem_major ? "Yes" : "No",
+        p.num_ecs,
+        p.num_awards,
+        p.num_acceptances,
+        p.t20_accepted ? "Yes" : "No",
+        p.t5_accepted ? "Yes" : "No",
+      ].join(","));
+    });
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "collegebase-profiles.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="page browser">
       <div className="browser-header">
@@ -89,8 +116,14 @@ export default function Browser() {
             {total > LIMIT && ` Showing ${offset + 1}–${Math.min(offset + LIMIT, total)}.`}
           </p>
         </div>
-        <input className="search-box" placeholder="Search majors, schools, ECs…"
-          value={search} onChange={(e) => setSearch(e.target.value)} />
+        <div className="browser-actions">
+          <input className="search-box" placeholder="Search majors, schools, ECs…"
+            value={search} onChange={(e) => setSearch(e.target.value)} />
+          <button className="export-btn" onClick={() => exportCsv(sorted)}
+            disabled={sorted.length === 0}>
+            Export CSV
+          </button>
+        </div>
       </div>
 
       {loading ? (

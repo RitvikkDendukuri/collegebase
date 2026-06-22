@@ -55,6 +55,7 @@
 
 .unreliable-row { opacity: 0.5; }
 .unreliable { color: var(--warn); font-size: 11px; }
+.ci-range { color: var(--text-muted); font-size: 11px; cursor: help; }
 
 .empty-row { text-align: center; color: var(--text-sub); padding: 24px; }
 
