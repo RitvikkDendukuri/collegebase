@@ -22,7 +22,7 @@ function resolveTheme(stored) {
 }
 
 function ThemePicker() {
-  const [stored, setStored] = useState(() => localStorage.getItem("theme") || "auto");
+  const [stored, setStored] = useState(() => localStorage.getItem("theme") || "dark");
   const active = resolveTheme(stored);
 
   useEffect(() => {
