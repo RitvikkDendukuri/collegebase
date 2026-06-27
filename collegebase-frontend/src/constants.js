@@ -1,10 +1,10 @@
 export const MIN_RELIABLE_N = 15;
 
 export const TIER_COLORS = {
-  t5: "#ef4444",
-  t10: "#f97316",
-  t20: "#6366f1",
-  t50: "#22c55e",
+  t5: "#e4e4ef",
+  t10: "#a0a0b8",
+  t20: "#6b6b80",
+  t50: "#4a4a5a",
 };
 
 export const TIER_KEYS = ["t5_accepted", "t10_accepted", "t20_accepted", "t50_accepted"];

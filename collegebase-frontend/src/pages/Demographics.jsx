@@ -11,7 +11,7 @@ import { MIN_RELIABLE_N, TIER_LABELS } from "../constants";
 import "./Demographics.css";
 
 const MIN_N = MIN_RELIABLE_N;
-const TIER_COLORS_KEYED = { t5_accepted: "#ef4444", t10_accepted: "#f97316", t20_accepted: "#6366f1", t50_accepted: "#22c55e" };
+const TIER_COLORS_KEYED = { t5_accepted: "#e4e4ef", t10_accepted: "#a0a0b8", t20_accepted: "#6b6b80", t50_accepted: "#4a4a5a" };
 
 function RateTable({ data, labelKey, title, onRowClick, hideUnreliable }) {
   const [sortKey, setSortKey] = useState("n");

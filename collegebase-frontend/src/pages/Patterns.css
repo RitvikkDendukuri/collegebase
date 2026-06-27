@@ -7,7 +7,7 @@
 
 .tier-tab {
   padding: 8px 20px;
-  border-radius: var(--radius);
+  border-radius: 4px;
   border: 1px solid var(--border);
   background: var(--surface2);
   color: var(--text);
@@ -23,9 +23,9 @@
 }
 
 .tier-tab.active {
-  color: #fff;
+  background: var(--text);
+  color: var(--bg);
   border-color: transparent;
-  box-shadow: var(--shadow-sm);
 }
 
 .section-tabs {
@@ -52,8 +52,8 @@
 }
 
 .section-tab.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
+  color: var(--text);
+  border-bottom-color: var(--text);
 }
 
 .pattern-grid {
@@ -137,7 +137,7 @@
 
 .count-stat {
   background: var(--surface2);
-  border-radius: var(--radius);
+  border-radius: 4px;
   border: 1px solid var(--border);
   padding: 10px 14px;
   font-size: 12px;
@@ -199,7 +199,7 @@
 .heatmap-cell {
   position: relative;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 2px;
   min-height: 56px;
   display: flex;
   flex-direction: column;
@@ -212,8 +212,7 @@
 }
 
 .heatmap-cell:hover {
-  transform: scale(1.04);
-  box-shadow: var(--shadow-md);
+  border-color: var(--text-muted);
   z-index: 2;
 }
 
@@ -242,6 +241,9 @@
   font-weight: 700;
   color: var(--text);
 }
+
+.heatmap-cell.dark-text .heatmap-rate { color: #0a0a0f; }
+.heatmap-cell.dark-text .heatmap-n { color: #2a2a3a; }
 
 .heatmap-n {
   font-size: 10px;

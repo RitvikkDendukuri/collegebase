@@ -94,20 +94,9 @@ export default function Similar() {
     <div className="page similar">
       <h1>Find Similar Profiles</h1>
       <p className="page-sub">
-        Look up an existing profile by ID, or enter your own stats to find
-        the most similar applicants in the database.
+        Enter your stats to find the most similar applicants in the database
+        and see how they fared.
       </p>
-
-      <div className="mode-tabs">
-        <button className={`mode-tab ${mode === "custom" ? "active" : ""}`}
-          onClick={() => { setMode("custom"); setResults(null); setOutcomes(null); setAnchor(null); setError(null); }}>
-          Enter my stats
-        </button>
-        <button className={`mode-tab ${mode === "id" ? "active" : ""}`}
-          onClick={() => { setMode("id"); setResults(null); setOutcomes(null); setAnchor(null); setError(null); }}>
-          Look up by ID
-        </button>
-      </div>
 
       {mode === "custom" ? (
         <div className="similar-controls custom-controls">
@@ -172,6 +161,10 @@ export default function Similar() {
           </button>
         </div>
       )}
+      <button className="mode-switch-link"
+        onClick={() => { setMode(mode === "custom" ? "id" : "custom"); setResults(null); setOutcomes(null); setAnchor(null); setError(null); }}>
+        {mode === "custom" ? "Or look up an existing profile by ID →" : "← Back to entering your stats"}
+      </button>
 
       {error && <div className="page-error">{error}</div>}
 
@@ -230,9 +223,7 @@ export default function Similar() {
 
       {!results && !loading && !error && (
         <div className="similar-empty">
-          {mode === "custom"
-            ? "Enter your stats above and click \"Find similar\" to see the nearest matches."
-            : "Enter a profile ID above and click \"Find similar\" to see the nearest neighbours."}
+          Enter your stats above and click "Find similar" to see the nearest matches.
         </div>
       )}
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, NavLink, useLocation } from "react-router-dom";
 import { FilterProvider } from "./context/FilterContext";
 import { SavedProvider } from "./context/SavedContext";
@@ -7,23 +7,10 @@ import Dashboard from "./pages/Dashboard";
 import Browser from "./pages/Browser";
 import Patterns from "./pages/Patterns";
 import Schools from "./pages/Schools";
-import Demographics from "./pages/Demographics";
 import Similar from "./pages/Similar";
 import Saved from "./pages/Saved";
-import Archetypes from "./pages/Archetypes";
 import ErrorBoundary from "./components/ErrorBoundary";
 import "./index.css";
-
-const THEMES = [
-  { id: "dark",     label: "Dark",     icon: "🌑", group: "dark" },
-  { id: "midnight", label: "Midnight", icon: "🌊", group: "dark" },
-  { id: "forest",   label: "Forest",   icon: "🌲", group: "dark" },
-  { id: "rose",     label: "Rose",     icon: "🌸", group: "dark" },
-  { id: "sunset",   label: "Sunset",   icon: "🌅", group: "dark" },
-  { id: "light",    label: "Light",    icon: "☀️", group: "light" },
-  { id: "nord",     label: "Nord",     icon: "❄️", group: "light" },
-  { id: "lavender", label: "Lavender", icon: "💜", group: "light" },
-];
 
 function getSystemTheme() {
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
@@ -36,8 +23,6 @@ function resolveTheme(stored) {
 
 function ThemePicker() {
   const [stored, setStored] = useState(() => localStorage.getItem("theme") || "auto");
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
   const active = resolveTheme(stored);
 
   useEffect(() => {
@@ -53,53 +38,14 @@ function ThemePicker() {
     return () => mq.removeEventListener("change", handler);
   }, [stored]);
 
-  useEffect(() => {
-    if (!open) return;
-    const close = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, [open, ref]);
-
-  const current = THEMES.find((t) => t.id === active) || THEMES[0];
+  const nextTheme = active === "dark" ? "light" : "dark";
 
   return (
-    <div className="theme-picker" ref={ref}>
-      <button className="theme-toggle" onClick={() => setOpen(!open)}
-        title="Change theme">
-        {stored === "auto" ? "🔄" : current.icon}
-      </button>
-      {open && (
-        <div className="theme-dropdown">
-          <button
-            className={`theme-option ${stored === "auto" ? "active" : ""}`}
-            onClick={() => { setStored("auto"); setOpen(false); }}>
-            <span className="theme-option-icon">🔄</span>
-            <span>Auto</span>
-            <span className="theme-option-hint">System</span>
-          </button>
-          <div className="theme-group-label">Dark</div>
-          {THEMES.filter((t) => t.group === "dark").map((t) => (
-            <button key={t.id}
-              className={`theme-option ${active === t.id && stored !== "auto" ? "active" : ""}`}
-              onClick={() => { setStored(t.id); setOpen(false); }}>
-              <span className="theme-option-icon">{t.icon}</span>
-              <span>{t.label}</span>
-            </button>
-          ))}
-          <div className="theme-group-label">Light</div>
-          {THEMES.filter((t) => t.group === "light").map((t) => (
-            <button key={t.id}
-              className={`theme-option ${active === t.id && stored !== "auto" ? "active" : ""}`}
-              onClick={() => { setStored(t.id); setOpen(false); }}>
-              <span className="theme-option-icon">{t.icon}</span>
-              <span>{t.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+    <button className="theme-toggle" onClick={() => setStored(nextTheme)}
+      title={`Switch to ${nextTheme} mode`}
+      aria-label={`Switch to ${nextTheme} mode`}>
+      {active === "dark" ? "◑" : "◐"}
+    </button>
   );
 }
 
@@ -138,8 +84,6 @@ function MobileNav({ menuOpen, setMenuOpen, filterOpen, setFilterOpen }) {
         <NavLink to="/browser">Browse</NavLink>
         <NavLink to="/patterns">Patterns</NavLink>
         <NavLink to="/schools">Schools</NavLink>
-        <NavLink to="/demographics">Demographics</NavLink>
-        <NavLink to="/archetypes">Archetypes</NavLink>
         <NavLink to="/similar">Find Similar</NavLink>
         <NavLink to="/saved">Saved</NavLink>
       </div>
@@ -156,20 +100,75 @@ function MobileNav({ menuOpen, setMenuOpen, filterOpen, setFilterOpen }) {
   );
 }
 
-function DesktopNav() {
+function DesktopNav({ filterOpen, setFilterOpen }) {
   return (
-    <nav className="app-nav">
-      <span className="brand">CollegeBase</span>
-      <NavLink to="/">Dashboard</NavLink>
-      <NavLink to="/browser">Browse</NavLink>
-      <NavLink to="/patterns">Patterns</NavLink>
-      <NavLink to="/schools">Schools</NavLink>
-      <NavLink to="/demographics">Demographics</NavLink>
-      <NavLink to="/archetypes">Archetypes</NavLink>
-      <NavLink to="/similar">Find Similar</NavLink>
-      <NavLink to="/saved">Saved</NavLink>
-      <ThemePicker />
-    </nav>
+    <>
+      <nav className="side-rail">
+        <span className="side-rail-brand">CB</span>
+
+        <div className="side-rail-links">
+          <NavLink to="/" end data-tooltip="Dashboard">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="8" height="8" rx="1" /><rect x="13" y="3" width="8" height="8" rx="1" />
+              <rect x="3" y="13" width="8" height="8" rx="1" /><rect x="13" y="13" width="8" height="8" rx="1" />
+            </svg>
+            <span className="side-rail-label">Dashboard</span>
+          </NavLink>
+          <NavLink to="/browser" data-tooltip="Browse">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="18" x2="20" y2="18" />
+            </svg>
+            <span className="side-rail-label">Browse</span>
+          </NavLink>
+          <NavLink to="/patterns" data-tooltip="Patterns">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="4 18 8 12 12 16 16 8 20 4" />
+              <line x1="4" y1="20" x2="20" y2="20" />
+            </svg>
+            <span className="side-rail-label">Patterns</span>
+          </NavLink>
+          <NavLink to="/schools" data-tooltip="Schools">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 21V9l9-5 9 5v12" /><path d="M9 21V13h6v8" />
+              <line x1="3" y1="9" x2="21" y2="9" />
+            </svg>
+            <span className="side-rail-label">Schools</span>
+          </NavLink>
+          <NavLink to="/similar" data-tooltip="Find Similar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7" /><line x1="16.5" y1="16.5" x2="21" y2="21" />
+            </svg>
+            <span className="side-rail-label">Similar</span>
+          </NavLink>
+          <NavLink to="/saved" data-tooltip="Saved">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 3h14a1 1 0 0 1 1 1v16.5a.5.5 0 0 1-.8.4L12 16l-7.2 4.9A.5.5 0 0 1 4 20.5V4a1 1 0 0 1 1-1z" />
+            </svg>
+            <span className="side-rail-label">Saved</span>
+          </NavLink>
+        </div>
+
+        <div className="side-rail-bottom">
+          <button className="side-rail-action" onClick={() => setFilterOpen(!filterOpen)}
+            aria-label="Toggle filters" data-tooltip="Filters">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="20" y2="12" /><line x1="12" y1="18" x2="20" y2="18" />
+              <circle cx="6" cy="12" r="2" fill="currentColor" /><circle cx="10" cy="18" r="2" fill="currentColor" /><circle cx="8" cy="6" r="2" fill="currentColor" />
+            </svg>
+          </button>
+          <ThemePicker />
+        </div>
+      </nav>
+
+      {filterOpen && <div className="desktop-filter-overlay" onClick={() => setFilterOpen(false)} />}
+      <div className={`desktop-filter-drawer ${filterOpen ? "open" : ""}`}>
+        <div className="desktop-filter-header">
+          <span>Filters</span>
+          <button onClick={() => setFilterOpen(false)}>✕</button>
+        </div>
+        <Sidebar />
+      </div>
+    </>
   );
 }
 
@@ -184,8 +183,6 @@ function MainContent() {
           <Route path="/browser" element={<Browser />} />
           <Route path="/patterns" element={<Patterns />} />
           <Route path="/schools" element={<Schools />} />
-          <Route path="/demographics" element={<Demographics />} />
-          <Route path="/archetypes" element={<Archetypes />} />
           <Route path="/similar" element={<Similar />} />
           <Route path="/saved" element={<Saved />} />
           <Route path="*" element={<NotFound />} />
@@ -224,10 +221,7 @@ export default function App() {
               <MobileNav menuOpen={menuOpen} setMenuOpen={setMenuOpen}
                 filterOpen={filterOpen} setFilterOpen={setFilterOpen} />
             ) : (
-              <>
-                <DesktopNav />
-                <Sidebar />
-              </>
+              <DesktopNav filterOpen={filterOpen} setFilterOpen={setFilterOpen} />
             )}
 
             <MainContent />

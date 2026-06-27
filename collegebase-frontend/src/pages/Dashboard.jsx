@@ -1,16 +1,14 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer,
   BarChart, Bar, CartesianGrid, Legend,
-  AreaChart, Area,
 } from "recharts";
 import { api } from "../api";
 import { useFilters } from "../context/FilterContext";
 import { usePageTitle } from "../utils";
-import { makeRate, TIER_KEYS } from "../constants";
+import { makeRate, TIER_KEYS, MIN_RELIABLE_N, TIER_LABELS } from "../constants";
 import SampleBadge from "../components/SampleBadge";
 import ProfileDrawer from "../components/ProfileDrawer";
-import CorrelationMatrix from "../components/CorrelationMatrix";
 import "./Dashboard.css";
 
 function computeStats(profiles) {
@@ -41,6 +39,48 @@ function computeStats(profiles) {
   }
 
   return { overall, acceptance_rates };
+}
+
+function computeDemographics(profiles) {
+  const grouped = {};
+  profiles.forEach((p) => {
+    const key = p.race_group || p.race || "Unknown";
+    if (!grouped[key]) grouped[key] = { total: 0, accepted: {} };
+    grouped[key].total += 1;
+    for (const t of TIER_KEYS) {
+      if (p[t]) grouped[key].accepted[t] = (grouped[key].accepted[t] || 0) + 1;
+    }
+  });
+  return Object.entries(grouped)
+    .map(([label, { total, accepted }]) => ({
+      label,
+      n: total,
+      t20_rate: total >= MIN_RELIABLE_N && accepted.t20_accepted
+        ? +((accepted.t20_accepted / total) * 100).toFixed(1)
+        : null,
+      reliable: total >= MIN_RELIABLE_N,
+    }))
+    .filter((d) => d.n >= 3)
+    .sort((a, b) => b.n - a.n);
+}
+
+function computeGenderSplit(profiles) {
+  const grouped = {};
+  profiles.forEach((p) => {
+    const key = p.gender || "Unknown";
+    if (!grouped[key]) grouped[key] = { total: 0, t20: 0 };
+    grouped[key].total += 1;
+    if (p.t20_accepted) grouped[key].t20 += 1;
+  });
+  return Object.entries(grouped)
+    .map(([label, { total, t20 }]) => ({
+      label,
+      n: total,
+      t20_rate: total >= MIN_RELIABLE_N ? +((t20 / total) * 100).toFixed(1) : null,
+      reliable: total >= MIN_RELIABLE_N,
+    }))
+    .filter((d) => d.n >= 3)
+    .sort((a, b) => b.n - a.n);
 }
 
 export default function Dashboard() {
@@ -80,27 +120,8 @@ export default function Dashboard() {
     };
   }, [profiles]);
 
-  const ecDist = useMemo(() => {
-    const ecCounts = {};
-    profiles.forEach((p) => {
-      const n = p.num_ecs;
-      ecCounts[n] = (ecCounts[n] || 0) + 1;
-    });
-    return Object.entries(ecCounts)
-      .sort(([a], [b]) => +a - +b)
-      .map(([n, count]) => ({ ecs: +n, count }));
-  }, [profiles]);
-
-  const tierBars = useMemo(() => TIER_KEYS.map((t) => ({
-    tier: t.replace("_accepted", "").toUpperCase(),
-    All: acceptance_rates[t].all.rate !== null
-      ? +(acceptance_rates[t].all.rate * 100).toFixed(1) : 0,
-    STEM: acceptance_rates[t].stem.rate !== null
-      ? +(acceptance_rates[t].stem.rate * 100).toFixed(1) : 0,
-    "Non-STEM": acceptance_rates[t].non_stem.rate !== null
-      ? +(acceptance_rates[t].non_stem.rate * 100).toFixed(1) : 0,
-    n: acceptance_rates[t].all.n,
-  })), [acceptance_rates]);
+  const demoData = useMemo(() => computeDemographics(profiles), [profiles]);
+  const genderData = useMemo(() => computeGenderSplit(profiles), [profiles]);
 
   if (loading) return <div className="page-loading">Loading dashboard…</div>;
   if (error) return <div className="page-error">Error: {error}</div>;
@@ -116,7 +137,6 @@ export default function Dashboard() {
       <h1>Dashboard</h1>
       <p className="page-sub">Summary of all {overall.total_profiles} profiles in the database.</p>
 
-      {/* Key metrics */}
       <div className="metric-row">
         <MetricCard label="Total profiles" value={overall.total_profiles} />
         <MetricCard label="Mean GPA (unweighted)" value={overall.mean_gpa_unweighted?.toFixed(2)} />
@@ -129,7 +149,6 @@ export default function Dashboard() {
           sub={`n = ${overall.test_optional_share.n}`} />
       </div>
 
-      {/* Acceptance rates with sample-size honesty */}
       <section className="chart-section">
         <h2>Acceptance rates by tier</h2>
         <p className="section-sub">Each rate shows the number of profiles it's based on. Rates with n &lt; 15 are flagged unreliable.</p>
@@ -150,24 +169,6 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Acceptance rate bar chart */}
-      <section className="chart-section">
-        <h2>Acceptance rate by tier — STEM vs Non-STEM</h2>
-        <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={tierBars}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-            <XAxis dataKey="tier" tick={{ fill: "var(--text-sub)" }} />
-            <YAxis unit="%" domain={[0, 100]} tick={{ fill: "var(--text-sub)" }} />
-            <Tooltip formatter={(v) => v + "%"} />
-            <Legend />
-            <Bar dataKey="All" fill="#6366f1" />
-            <Bar dataKey="STEM" fill="#22c55e" />
-            <Bar dataKey="Non-STEM" fill="#f59e0b" />
-          </BarChart>
-        </ResponsiveContainer>
-      </section>
-
-      {/* GPA vs SAT scatter */}
       <section className="chart-section">
         <h2>GPA vs SAT equivalent</h2>
         <ResponsiveContainer width="100%" height={320}>
@@ -194,49 +195,109 @@ export default function Dashboard() {
               }} />
             <Scatter name="Non-STEM" data={nonStemPoints} fill="#f59e0b" opacity={0.7}
               cursor="pointer" onClick={(d) => setSelectedId(d.id)} />
-            <Scatter name="STEM" data={stemPoints} fill="#6366f1" opacity={0.7}
+            <Scatter name="STEM" data={stemPoints} fill="#8b8ba0" opacity={0.7}
               cursor="pointer" onClick={(d) => setSelectedId(d.id)} />
           </ScatterChart>
         </ResponsiveContainer>
         <p className="chart-legend">
-          <span className="legend-dot" style={{background:"#6366f1"}} /> STEM &nbsp;
+          <span className="legend-dot" style={{background:"#8b8ba0"}} /> STEM &nbsp;
           <span className="legend-dot" style={{background:"#f59e0b"}} /> Non-STEM
         </p>
       </section>
 
-      {/* EC count distribution */}
-      <section className="chart-section">
-        <h2>Extracurricular count distribution</h2>
-        <ResponsiveContainer width="100%" height={240}>
-          <AreaChart data={ecDist}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-            <XAxis dataKey="ecs" tick={{ fill: "var(--text-sub)" }}
-              label={{ value: "# of ECs", position: "insideBottom", offset: -5, fill: "var(--text-sub)" }} />
-            <YAxis tick={{ fill: "var(--text-sub)" }} />
-            <Tooltip />
-            <Area type="monotone" dataKey="count" fill="#6366f1" stroke="#4f46e5" fillOpacity={0.4} />
-          </AreaChart>
-        </ResponsiveContainer>
-      </section>
-
-      <section className="chart-section">
-        <h2>Feature correlation matrix</h2>
-        <p className="section-sub">
-          Pearson correlation between numeric features across the {overall.total_profiles} filtered
-          profiles. Green = move together, red = move oppositely, yellow = unrelated.
-        </p>
-        <CorrelationMatrix profiles={profiles} />
-      </section>
+      {demoData.length > 0 && (
+        <section className="chart-section">
+          <h2>Demographics at a glance</h2>
+          <p className="section-sub">
+            T20 acceptance rate by race/ethnicity and gender. Groups with fewer than {MIN_RELIABLE_N} profiles are dimmed.
+          </p>
+          <div className="demo-summary">
+            <div className="demo-summary-col">
+              <h3>Race / Ethnicity</h3>
+              {demoData.map((d) => (
+                <div key={d.label} className={`demo-row ${d.reliable ? "" : "dimmed"}`}>
+                  <span className="demo-label">{d.label}</span>
+                  <span className="demo-n">n={d.n}</span>
+                  <span className="demo-rate">{d.t20_rate !== null ? d.t20_rate + "%" : "—"}</span>
+                </div>
+              ))}
+            </div>
+            <div className="demo-summary-col">
+              <h3>Gender</h3>
+              {genderData.map((d) => (
+                <div key={d.label} className={`demo-row ${d.reliable ? "" : "dimmed"}`}>
+                  <span className="demo-label">{d.label}</span>
+                  <span className="demo-n">n={d.n}</span>
+                  <span className="demo-rate">{d.t20_rate !== null ? d.t20_rate + "%" : "—"}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <ProfileDrawer applicantId={selectedId} onClose={() => setSelectedId(null)} />
     </div>
   );
 }
 
+function useCountUp(target, duration = 600) {
+  const [display, setDisplay] = useState(target);
+  const rafRef = useRef(null);
+
+  useEffect(() => {
+    // Handle null / dash / non-numeric
+    if (target == null || target === "—") {
+      setDisplay(target);
+      return;
+    }
+
+    const str = String(target);
+    // Extract numeric part and suffix (e.g. "42%" -> 42, "%")
+    const match = str.match(/^(-?\d+\.?\d*)\s*(.*)$/);
+    if (!match) {
+      setDisplay(target);
+      return;
+    }
+
+    const end = parseFloat(match[1]);
+    const suffix = match[2] || "";
+    const hasDecimal = match[1].includes(".");
+    const decimals = hasDecimal ? (match[1].split(".")[1] || "").length : 0;
+
+    let start = performance.now();
+    const animate = (now) => {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // ease-out quad
+      const eased = 1 - (1 - progress) * (1 - progress);
+      const current = eased * end;
+
+      if (hasDecimal) {
+        setDisplay(current.toFixed(decimals) + suffix);
+      } else {
+        setDisplay(Math.round(current) + suffix);
+      }
+
+      if (progress < 1) {
+        rafRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    rafRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [target, duration]);
+
+  return display;
+}
+
 function MetricCard({ label, value, sub }) {
+  const animatedValue = useCountUp(value);
   return (
     <div className="metric-card">
-      <div className="metric-value">{value ?? "—"}</div>
+      <div className="metric-value">{animatedValue ?? "—"}</div>
       <div className="metric-label">{label}</div>
       {sub && <div className="metric-sub">{sub}</div>}
     </div>

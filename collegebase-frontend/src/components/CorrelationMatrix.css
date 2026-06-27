@@ -30,7 +30,7 @@
 
 .corr-cell {
   min-height: 52px;
-  border-radius: var(--radius-sm);
+  border-radius: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -38,11 +38,11 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   cursor: help;
-  transition: transform var(--transition);
+  transition: opacity var(--transition);
 }
 
 .corr-cell:hover {
-  transform: scale(1.05);
+  opacity: 0.8;
 }
 
 .corr-legend {

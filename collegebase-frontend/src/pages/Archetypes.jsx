@@ -11,14 +11,14 @@ import ProfileDrawer from "../components/ProfileDrawer";
 import "./Archetypes.css";
 
 const ARCHETYPE_COLORS = {
-  "GPA-Focused": "#22c55e",
-  "SAT-Focused": "#3b82f6",
-  "EC-Focused": "#f59e0b",
-  "Award-Focused": "#ef4444",
-  "Well-Balanced": "#6366f1",
+  "GPA-Focused": "#e4e4ef",
+  "SAT-Focused": "#a0a0b8",
+  "EC-Focused": "#7a7a90",
+  "Award-Focused": "#5a5a6e",
+  "Well-Balanced": "#c0c0d0",
 };
 
-const GROUPED_COLORS = ["#6366f1", "#3b82f6", "#22c55e", "#f59e0b"];
+const GROUPED_COLORS = ["#e4e4ef", "#a0a0b8", "#7a7a90", "#5a5a6e"];
 
 export default function Archetypes() {
   const [view, setView] = useState("detailed");

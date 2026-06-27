@@ -208,9 +208,10 @@ function AcceptanceHeatmap({ profiles, tier, color }) {
             <div className="heatmap-rowhead">{sat.label}</div>
             {cells[ri].map((c, ci) => {
               const alpha = c.rate != null && c.reliable ? 0.12 + 0.88 * (c.rate / maxRate) : 0;
+              const darkText = alpha > 0.55;
               return (
                 <div key={ci}
-                  className={`heatmap-cell ${c.n === 0 ? "empty" : ""} ${c.n > 0 && !c.reliable ? "thin" : ""}`}
+                  className={`heatmap-cell ${c.n === 0 ? "empty" : ""} ${c.n > 0 && !c.reliable ? "thin" : ""} ${darkText ? "dark-text" : ""}`}
                   style={c.reliable ? { background: hexWithAlpha(color, alpha) } : undefined}
                   title={c.n === 0 ? "No profiles in this band"
                     : `n = ${c.n}${c.reliable

@@ -89,8 +89,9 @@
 }
 
 .drawer-title {
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 24px;
+  font-family: var(--font-heading);
+  font-weight: 400;
   margin-bottom: 24px;
   letter-spacing: -0.02em;
 }
@@ -198,7 +199,7 @@
 .rating-avg {
   font-size: 36px;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--text);
   letter-spacing: -0.02em;
 }
 
@@ -244,33 +245,30 @@
 }
 
 .star-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-soft);
-  transform: translateY(-1px);
+  border-color: var(--text-muted);
+  color: var(--text);
+  background: var(--surface2);
 }
 
 .star-btn.selected {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-  box-shadow: 0 2px 8px var(--accent-glow);
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
 }
 
 .submit-btn {
-  background: var(--accent);
-  color: #fff;
+  background: var(--text);
+  color: var(--bg);
   border: none;
-  border-radius: var(--radius);
+  border-radius: 4px;
   padding: 10px 24px;
   font-weight: 600;
-  transition: background var(--transition), transform var(--transition);
+  transition: opacity var(--transition);
 }
 
 .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .submit-btn:not(:disabled):hover {
-  background: var(--accent-hover);
-  transform: translateY(-1px);
+  opacity: 0.85;
 }
 
 @media (max-width: 768px) {
